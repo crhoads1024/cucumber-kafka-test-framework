@@ -1,0 +1,27 @@
+# Build outputs
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.project
+.classpath
+.settings/
+
+# Generated data (regenerated in CI)
+generated-data/
+
+# Test reports (generated per run)
+test-reports/
+perf-results/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "order-event-schema",
+  "title": "Order Event",
+  "description": "Schema for all events published to the order.events Kafka topic",
+  "type": "object",
+  "required": ["eventId", "eventType", "timestamp", "source", "payload"],
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique event identifier"
+    },
+    "eventType": {
+      "type": "string",
+      "enum": ["ORDER_CREATED", "ORDER_CONFIRMED", "ORDER_CANCELLED", "ORDER_SHIPPED", "ORDER_DELIVERED"],
+      "description": "Type of order event"
+    },
+    "topic": {
+      "type": "string",
+      "const": "order.events"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp"
+    },
+    "source": {
+      "type": "string",
+      "description": "Service that produced this event"
+    },
+    "correlationId": {
+      "type": "string",
+      "description": "Correlation ID for tracing (typically the order ID)"
+    },
+    "payload": {
+      "type": "object",
+      "required": ["orderId", "customerId"],
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "description": "The order ID"
+        },
+        "customerId": {
+          "type": "string",
+          "description": "The customer ID"
+        },
+        "totalAmount": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Order total"
+        },
+        "itemCount": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of items in the order"
+        },
+        "status": {
+          "type": "string",
+          "description": "Current order status"
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

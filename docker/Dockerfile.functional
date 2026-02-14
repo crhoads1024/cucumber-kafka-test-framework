@@ -1,0 +1,51 @@
+# ============================================================
+# Dockerfile for Functional + DB Tests
+# 
+# Runs Cucumber BDD tests with REST Assured, Kafka consumer,
+# and database assertions. Uses multi-stage build for
+# smaller final image.
+#
+# BUILD:
+#   docker build -f docker/Dockerfile.functional -t test-functional .
+#
+# RUN:
+#   docker run --rm \
+#     -e APP_BASE_URL=http://host.docker.internal:8080 \
+#     -e KAFKA_BOOTSTRAP_SERVERS=kafka:9092 \
+#     -e DB_URL=jdbc:postgresql://postgres:5432/testdb \
+#     -v $(pwd)/generated-data:/data \
+#     -v $(pwd)/test-reports:/reports \
+#     test-functional
+# ============================================================
+
+# Stage 1: Build
+FROM maven:3.9-eclipse-temurin-17 AS build
+WORKDIR /app
+COPY pom.xml .
+COPY shared/pom.xml shared/
+COPY data-generator/pom.xml data-generator/
+COPY functional-tests/pom.xml functional-tests/
+
+# Download dependencies (cached layer)
+RUN mvn dependency:go-offline -pl shared,data-generator,functional-tests -am
+
+COPY shared/src shared/src
+COPY data-generator/src data-generator/src
+COPY functional-tests/src functional-tests/src
+RUN mvn package -pl shared,data-generator,functional-tests -am -DskipTests
+
+# Stage 2: Run
+FROM eclipse-temurin:17-jre
+WORKDIR /test
+
+COPY --from=build /app/functional-tests/target/*.jar ./
+COPY --from=build /app/functional-tests/target/dependency/*.jar ./lib/
+COPY --from=build /app/functional-tests/src/test/resources ./resources/
+
+# Entry point runs Cucumber tests with configurable tags
+ENTRYPOINT ["java", "-cp", "*:lib/*:resources", \
+    "org.junit.platform.console.ConsoleLauncher", \
+    "--select-package=com.enterprise.testing.functional"]
+
+# Default: run all tests except WIP
+CMD ["--include-tag", "functional | database"]
