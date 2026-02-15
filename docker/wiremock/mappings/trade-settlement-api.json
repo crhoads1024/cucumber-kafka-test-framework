@@ -1,0 +1,151 @@
+{
+  "mappings": [
+    {
+      "name": "Submit Trade - Success",
+      "request": { "method": "POST", "url": "/api/trades" },
+      "response": {
+        "status": 201,
+        "headers": { "Content-Type": "application/json" },
+        "transformers": ["response-template"],
+        "jsonBody": {
+          "tradeId": "TRD-{{randomValue type='UUID'}}",
+          "symbol": "{{jsonPath request.body '$.symbol'}}",
+          "side": "{{jsonPath request.body '$.side'}}",
+          "quantity": "{{jsonPath request.body '$.quantity'}}",
+          "price": "{{jsonPath request.body '$.price'}}",
+          "status": "EXECUTED",
+          "exchange": "NMS",
+          "settlementId": "STL-{{randomValue type='UUID'}}",
+          "executedAt": "{{now}}"
+        }
+      }
+    },
+    {
+      "name": "Submit Trade - Invalid Symbol",
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "url": "/api/trades",
+        "bodyPatterns": [{ "matchesJsonPath": { "expression": "$.symbol", "contains": "INVALID" } }]
+      },
+      "response": {
+        "status": 400,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "error": "INVALID_SYMBOL", "message": "Symbol not recognized" }
+      }
+    },
+    {
+      "name": "Submit Trade - Zero Quantity",
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "url": "/api/trades",
+        "bodyPatterns": [{ "matchesJsonPath": { "expression": "$.quantity", "equalTo": "0" } }]
+      },
+      "response": {
+        "status": 400,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "error": "INVALID_QUANTITY", "message": "Quantity must be greater than zero" }
+      }
+    },
+    {
+      "name": "Get Trade by ID",
+      "request": { "method": "GET", "urlPathPattern": "/api/trades/[a-zA-Z0-9-]+" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "tradeId": "TRD-12345678",
+          "symbol": "AAPL",
+          "side": "BUY",
+          "quantity": 100,
+          "price": 185.50,
+          "totalValue": 18550.00,
+          "status": "EXECUTED",
+          "exchange": "NMS",
+          "accountId": "ACCT-99999",
+          "settlementId": "STL-87654321"
+        }
+      }
+    },
+    {
+      "name": "List Trades by Account",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/trades",
+        "queryParameters": { "accountId": { "matches": ".+" } }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": [
+          { "tradeId": "TRD-12345678", "symbol": "AAPL", "side": "BUY", "quantity": 100, "price": 185.50, "status": "EXECUTED" },
+          { "tradeId": "TRD-22345678", "symbol": "BTC-USD", "side": "BUY", "quantity": 1, "price": 97500.00, "status": "EXECUTED" }
+        ]
+      }
+    },
+    {
+      "name": "Get Settlement by Trade ID",
+      "request": { "method": "GET", "urlPathPattern": "/api/settlements/trade/[a-zA-Z0-9-]+" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "settlementId": "STL-87654321",
+          "tradeId": "TRD-12345678",
+          "symbol": "AAPL",
+          "side": "BUY",
+          "quantity": 100,
+          "settlementAmount": 18550.52,
+          "status": "CLEARING",
+          "tradeDate": "2026-02-15",
+          "settlementDate": "2026-02-17",
+          "counterpartyId": "CITADEL-001",
+          "clearingHouse": "OCC",
+          "custodianId": "BNY-MELLON"
+        }
+      }
+    },
+    {
+      "name": "Submit Clearing - Accepted",
+      "request": { "method": "POST", "url": "/api/clearing/submit" },
+      "response": {
+        "status": 202,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "clearingId": "CLR-{{randomValue type='UUID'}}",
+          "status": "ACCEPTED"
+        }
+      }
+    },
+    {
+      "name": "Get Clearing Status",
+      "request": { "method": "GET", "urlPathPattern": "/api/clearing/[a-zA-Z0-9-]+" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "clearingId": "CLR-12345678",
+          "status": "CLEARED",
+          "tradeId": "TRD-12345678",
+          "novationComplete": true,
+          "centralCounterparty": "OCC",
+          "marginRequirement": { "initialMargin": 5000.00, "maintenanceMargin": 3500.00 }
+        }
+      }
+    },
+    {
+      "name": "Get Margin Requirements",
+      "request": { "method": "GET", "urlPathPattern": "/api/clearing/[a-zA-Z0-9-]+/margin" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "initialMargin": 5000.00,
+          "maintenanceMargin": 3500.00,
+          "excessMargin": 1500.00
+        }
+      }
+    }
+  ]
+}

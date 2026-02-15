@@ -1,0 +1,82 @@
+{
+  "mappings": [
+    {
+      "name": "Health Check",
+      "request": { "method": "GET", "url": "/api/health" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "status": "UP", "service": "clearing-api", "timestamp": "{{now}}" }
+      }
+    },
+    {
+      "name": "Create Order - Success",
+      "request": { "method": "POST", "url": "/api/orders" },
+      "response": {
+        "status": 201,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "{{randomValue type='UUID'}}",
+          "customerId": "{{jsonPath request.body '$.customerId'}}",
+          "status": "CREATED",
+          "totalAmount": 149.99,
+          "createdAt": "{{now}}"
+        }
+      }
+    },
+    {
+      "name": "Get Order by ID",
+      "request": { "method": "GET", "urlPathPattern": "/api/orders/[a-zA-Z0-9-]+" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "ORD-12345678",
+          "customerId": "USR-87654321",
+          "status": "CREATED",
+          "totalAmount": 149.99,
+          "items": [{ "productId": "PROD-001", "quantity": 2, "price": 74.99 }]
+        }
+      }
+    },
+    {
+      "name": "List Orders by Customer",
+      "request": {
+        "method": "GET",
+        "urlPathPattern": "/api/orders",
+        "queryParameters": { "customerId": { "matches": ".+" } }
+      },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": [
+          { "id": "ORD-12345678", "customerId": "USR-87654321", "status": "CREATED", "totalAmount": 149.99 }
+        ]
+      }
+    },
+    {
+      "name": "Create Order - Missing Fields",
+      "priority": 1,
+      "request": {
+        "method": "POST",
+        "url": "/api/orders",
+        "bodyPatterns": [{ "matchesJsonPath": { "expression": "$.customerId", "absent": true } }]
+      },
+      "response": {
+        "status": 400,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "error": "VALIDATION_ERROR", "message": "Missing required field: customerId" }
+      }
+    },
+    {
+      "name": "Get Order - Not Found",
+      "priority": 1,
+      "request": { "method": "GET", "urlPathPattern": "/api/orders/NONEXISTENT.*" },
+      "response": {
+        "status": 404,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "error": "NOT_FOUND", "message": "Order not found" }
+      }
+    }
+  ]
+}
