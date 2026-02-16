@@ -79,6 +79,32 @@
       }
     },
     {
+      "name": "Confirm Order - Success",
+      "request": { "method": "PUT", "urlPathPattern": "/api/orders/[a-zA-Z0-9-]+/confirm" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "ORD-12345678",
+          "status": "CONFIRMED",
+          "confirmedAt": "{{now}}"
+        }
+      }
+    },
+    {
+      "name": "Cancel Order - Success",
+      "request": { "method": "PUT", "urlPathPattern": "/api/orders/[a-zA-Z0-9-]+/cancel" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": {
+          "id": "ORD-12345678",
+          "status": "CANCELLED",
+          "cancelledAt": "{{now}}"
+        }
+      }
+    },
+    {
       "name": "Get Order - Not Found",
       "priority": 1,
       "request": { "method": "GET", "urlPathPattern": "/api/orders/(NONEXISTENT|non-existent).*" },

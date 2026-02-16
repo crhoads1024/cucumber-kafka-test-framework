@@ -43,6 +43,14 @@ public class CommonSteps {
 
     @After
     public void tearDown() {
+        // Clean DB test data between scenarios to ensure isolation
+        if (context.getDbHelper() != null) {
+            try {
+                new com.enterprise.testing.functional.db.DatabaseSeeder(context.getDbHelper()).cleanAll();
+            } catch (Exception e) {
+                log.warn("DB cleanup failed (non-fatal): {}", e.getMessage());
+            }
+        }
         context.cleanup();
         log.info("--- Scenario complete ---");
     }

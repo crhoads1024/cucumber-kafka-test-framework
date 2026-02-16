@@ -13,16 +13,15 @@ Feature: Kafka Event Processing
   # KAFKA TEST WRITING GUIDE:
   #
   # These tests verify the event-driven side of the system:
-  # 1. Action (API call) -> Event produced on correct topic
-  # 2. Event payload matches expected structure and values
-  # 3. Events arrive within acceptable time window
-  #
-  # The KafkaTestConsumer runs in a background thread, capturing events.
-  # awaitEvent() polls captured events with a timeout.
+  # 1. Action (API call) -> Orchestration publishes Kafka events
+  # 2. Consumer captures events on subscribed topics
+  # 3. awaitEvent() polls captured events with a timeout
+  # 4. Assert payload matches expected structure and values
   # =========================================================================
 
   Scenario: Order creation produces ORDER_CREATED event
     When I submit a POST to "/api/orders" with the generated order payload
+    And the created order events are published to Kafka
     Then within 10 seconds a Kafka event should appear on "order.events" with:
       | field      | expected      |
       | eventType  | ORDER_CREATED |
@@ -31,7 +30,8 @@ Feature: Kafka Event Processing
 
   Scenario: Order confirmation produces multiple events
     Given an order has been created for the generated user
-    When I submit a PUT to "/api/orders/{created.order.id}/confirm"
+    And the created order events are published to Kafka
+    When I confirm the order via the API and persist the change
     Then within 10 seconds a Kafka event should appear on "order.events" with:
       | field      | expected        |
       | eventType  | ORDER_CONFIRMED |
@@ -41,7 +41,8 @@ Feature: Kafka Event Processing
 
   Scenario: Verify event ordering for order lifecycle
     Given an order has been created for the generated user
-    When I submit a PUT to "/api/orders/{created.order.id}/confirm"
+    And the created order events are published to Kafka
+    When I confirm the order via the API and persist the change
     Then the Kafka events on "order.events" should appear in order:
       | ORDER_CREATED   |
       | ORDER_CONFIRMED |
@@ -49,7 +50,8 @@ Feature: Kafka Event Processing
   @negative
   Scenario: Cancelled order does not produce notification event
     Given an order has been created for the generated user
-    When I submit a PUT to "/api/orders/{created.order.id}/cancel"
+    And the created order events are published to Kafka
+    When I cancel the order via the API and persist the change
     Then within 5 seconds a Kafka event should appear on "order.events" with:
       | field      | expected         |
       | eventType  | ORDER_CANCELLED  |

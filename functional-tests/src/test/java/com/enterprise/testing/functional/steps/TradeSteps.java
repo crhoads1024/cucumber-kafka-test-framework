@@ -366,4 +366,13 @@ public class TradeSteps {
         String details = String.valueOf(rows.get(0).get("details"));
         assertThat(details).contains("price");
     }
+
+    @When("I query the audit_log table for the submitted trade ID")
+    public void queryAuditLogForTrade() {
+        String tradeId = (String) context.get("created.trade.id");
+        var rows = context.getDbHelper().queryList(
+                "SELECT * FROM audit_log WHERE entity_id = ? ORDER BY created_at", tradeId);
+        context.put("db.audit.results", rows);
+        log.info("Found {} audit entries for trade {}", rows.size(), tradeId);
+    }
 }

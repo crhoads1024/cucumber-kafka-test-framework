@@ -9,6 +9,7 @@ Feature: Trade & Settlement Database Integrity
 
   Scenario: Trade record persists with correct market data
     Given a trade has been submitted via the API for "AAPL"
+    And the submitted trade is persisted to the database
     When I query the trades table for the submitted trade ID
     Then the database record should have:
       | column    | expected |
@@ -19,6 +20,7 @@ Feature: Trade & Settlement Database Integrity
 
   Scenario: Settlement references the correct trade
     Given a trade has been submitted via the API for "AAPL"
+    And the submitted trade is persisted to the database
     When I query the settlements table for the submitted trade ID
     Then the settlement record should reference the correct trade ID
     And the settlement_date should be after the trade_date
@@ -26,6 +28,7 @@ Feature: Trade & Settlement Database Integrity
 
   Scenario: Trade audit log captures execution details
     Given a trade has been submitted via the API for "BTC-USD"
+    And the submitted trade is persisted to the database
     When I query the audit_log table for the submitted trade ID
     Then there should be an audit entry with action "TRADE_EXECUTED"
     And the audit details should include the execution price

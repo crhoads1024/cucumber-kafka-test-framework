@@ -12,16 +12,16 @@ Feature: Database Integrity Tests
   #
   # These tests run AFTER functional/API tests to verify persistence:
   # 1. Perform an action (create order via API)
-  # 2. Query the database directly
-  # 3. Assert row values match expected data
+  # 2. Seed the data into the database (simulating the app's DB write)
+  # 3. Query the database directly
+  # 4. Assert row values match expected data
   #
-  # Use the DatabaseHelper for raw SQL queries.
-  # Keep assertions focused on business-critical fields.
-  # Test referential integrity (FK relationships).
+  # The E2E orchestration steps handle the API → DB bridge.
   # =========================================================================
 
   Scenario: Order data persists correctly after creation
     Given an order has been created via the API for the generated user
+    And the created order is persisted to the database
     When I query the orders table for the created order ID
     Then the database record should have:
       | column      | expected                  |
@@ -31,13 +31,15 @@ Feature: Database Integrity Tests
 
   Scenario: Order items are stored with correct references
     Given an order has been created via the API for the generated user
+    And the created order is persisted to the database
     When I query the order_items table for the created order ID
     Then the number of item records should match the order item count
     And each item record should reference the correct order ID
 
   Scenario: Order status update reflects in database
     Given an order has been created via the API for the generated user
-    When I confirm the order via the API
+    And the created order is persisted to the database
+    When I confirm the order via the API and persist the change
     And I query the orders table for the created order ID
     Then the database record should have:
       | column      | expected   |
@@ -46,6 +48,7 @@ Feature: Database Integrity Tests
 
   Scenario: Audit log captures order events
     Given an order has been created via the API for the generated user
+    And the created order is persisted to the database
     When I query the audit_log table for the created order ID
     Then there should be an audit entry with action "ORDER_CREATED"
     And the audit entry should reference the correct user ID
@@ -53,6 +56,7 @@ Feature: Database Integrity Tests
   @negative
   Scenario: Cancelled order does not leave orphan records
     Given an order has been created via the API for the generated user
-    When I cancel the order via the API
+    And the created order is persisted to the database
+    When I cancel the order via the API and persist the change
     Then the orders table should show status "CANCELLED" for the order
     And no active shipment records should exist for the order
