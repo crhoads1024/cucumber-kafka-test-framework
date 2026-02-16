@@ -124,6 +124,7 @@ public class TradeSteps {
         context.put("selected.trade", rejected);
         context.put("created.trade.id", rejected.getTradeId());
         log.info("Found rejected trade: {}", rejected);
+    }
 
     // ===== TRADE SUBMISSION =====
 
