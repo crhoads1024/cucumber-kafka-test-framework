@@ -45,7 +45,7 @@ public class KafkaSteps {
         KafkaTestConsumer consumer = context.getKafkaConsumer();
         assertThat(consumer).as("Kafka consumer not initialized. Add Background step.").isNotNull();
 
-        Map<String, String> expectedFields = dataTable.asMap(String.class, String.class);
+        Map<String, String> expectedFields = dataTable.asMaps(String.class, String.class).get(0);
 
         // Determine the current scenario's correlation ID for scoping
         String scenarioCorrelationId = resolveCurrentCorrelationId();

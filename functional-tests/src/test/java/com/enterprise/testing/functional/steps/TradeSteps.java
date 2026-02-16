@@ -81,9 +81,13 @@ public class TradeSteps {
     @Given("a generated trade for symbol {string}")
     public void selectTradeForSymbol(String symbol) {
         SyntheticDataSet data = context.getCurrentDataSet();
+        // Prefer EXECUTED trades; fall back to any trade for the symbol
         Trade trade = data.getTrades().stream()
-                .filter(t -> t.getSymbol().equals(symbol))
+                .filter(t -> t.getSymbol().equals(symbol) && t.getStatus() == TradeStatus.EXECUTED)
                 .findFirst()
+                .or(() -> data.getTrades().stream()
+                        .filter(t -> t.getSymbol().equals(symbol))
+                        .findFirst())
                 .orElseThrow(() -> new AssertionError(
                         "No trade found for symbol " + symbol + " in data set"));
 

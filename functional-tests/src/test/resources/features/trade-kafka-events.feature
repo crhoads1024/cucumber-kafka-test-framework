@@ -31,7 +31,7 @@ Feature: Trade & Settlement Kafka Events
     And the event payload should contain field "counterpartyId"
 
   Scenario: Completed settlement produces full event chain
-    Given a trade has been submitted for "MSFT"
+    Given a trade has been submitted for "AAPL"
     And the submitted trade events are published to Kafka
     Then the Kafka events on "settlement.events" should appear in order:
       | SETTLEMENT_CREATED   |

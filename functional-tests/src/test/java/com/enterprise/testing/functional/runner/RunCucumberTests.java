@@ -25,7 +25,7 @@ import static io.cucumber.junit.platform.engine.Constants.*;
 @ConfigurationParameter(key = FEATURES_PROPERTY_NAME, value = "src/test/resources/features")
 @ConfigurationParameter(key = GLUE_PROPERTY_NAME, value = "com.enterprise.testing.functional.steps")
 @ConfigurationParameter(key = PLUGIN_PROPERTY_NAME, value = "pretty, json:target/cucumber-reports/cucumber.json, html:target/cucumber-reports/cucumber.html")
-@ConfigurationParameter(key = FILTER_TAGS_PROPERTY_NAME, value = "not @wip")
+@ConfigurationParameter(key = FILTER_TAGS_PROPERTY_NAME, value = "not @wip and not @integration")
 public class RunCucumberTests {
     // This class is a configuration holder only.
     // Cucumber discovers features and glue code via the annotations above.

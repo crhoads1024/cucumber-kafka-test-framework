@@ -170,6 +170,11 @@ public class ApiSteps {
                 .isEqualTo(expectedValue);
     }
 
+    @Then("the response body field {string} should equal {string}")
+    public void responseFieldShouldEqual(String fieldName, String expectedValue) {
+        responseContainsFieldWithValue(fieldName, expectedValue);
+    }
+
     @Then("the response body field {string} should equal the generated user ID")
     public void responseFieldEqualsGeneratedUserId(String fieldName) {
         String actual = context.getLastApiResponse().jsonPath().getString(fieldName);
