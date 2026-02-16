@@ -1,7 +1,16 @@
 {
   "mappings": [
     {
-      "name": "Health Check",
+      "name": "Health Check - actuator",
+      "request": { "method": "GET", "url": "/actuator/health" },
+      "response": {
+        "status": 200,
+        "headers": { "Content-Type": "application/json" },
+        "jsonBody": { "status": "UP", "service": "clearing-api", "timestamp": "{{now}}" }
+      }
+    },
+    {
+      "name": "Health Check - api",
       "request": { "method": "GET", "url": "/api/health" },
       "response": {
         "status": 200,
@@ -15,10 +24,11 @@
       "response": {
         "status": 201,
         "headers": { "Content-Type": "application/json" },
+        "transformers": ["response-template"],
         "jsonBody": {
           "id": "{{randomValue type='UUID'}}",
           "customerId": "{{jsonPath request.body '$.customerId'}}",
-          "status": "CREATED",
+          "status": "PENDING",
           "totalAmount": 149.99,
           "createdAt": "{{now}}"
         }
@@ -33,7 +43,7 @@
         "jsonBody": {
           "id": "ORD-12345678",
           "customerId": "USR-87654321",
-          "status": "CREATED",
+          "status": "PENDING",
           "totalAmount": 149.99,
           "items": [{ "productId": "PROD-001", "quantity": 2, "price": 74.99 }]
         }
@@ -50,7 +60,7 @@
         "status": 200,
         "headers": { "Content-Type": "application/json" },
         "jsonBody": [
-          { "id": "ORD-12345678", "customerId": "USR-87654321", "status": "CREATED", "totalAmount": 149.99 }
+          { "id": "ORD-12345678", "customerId": "USR-87654321", "status": "PENDING", "totalAmount": 149.99 }
         ]
       }
     },
@@ -71,7 +81,7 @@
     {
       "name": "Get Order - Not Found",
       "priority": 1,
-      "request": { "method": "GET", "urlPathPattern": "/api/orders/NONEXISTENT.*" },
+      "request": { "method": "GET", "urlPathPattern": "/api/orders/(NONEXISTENT|non-existent).*" },
       "response": {
         "status": 404,
         "headers": { "Content-Type": "application/json" },
