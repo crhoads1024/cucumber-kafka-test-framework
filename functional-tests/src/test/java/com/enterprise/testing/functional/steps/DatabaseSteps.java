@@ -100,10 +100,12 @@ public class DatabaseSteps {
         Map<String, Object> row = (Map<String, Object>) context.get("db.query.result");
         assertThat(row).as("No database record found").isNotNull();
 
-        Map<String, String> expected = dataTable.asMap(String.class, String.class);
-        for (Map.Entry<String, String> entry : expected.entrySet()) {
-            String column = entry.getKey();
-            String expectedValue = resolvePlaceholder(entry.getValue());
+        // DataTable has headers: | column | expected |
+        // asMaps() uses first row as headers, returns list of maps
+        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
+        for (Map<String, String> expected : rows) {
+            String column = expected.get("column");
+            String expectedValue = resolvePlaceholder(expected.get("expected"));
             String actualValue = String.valueOf(row.get(column));
 
             assertThat(actualValue)

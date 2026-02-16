@@ -137,6 +137,19 @@ public class TestDataRegistry {
         }
 
         List<Settlement> settlements = getSettlementGenerator().fromTrades(trades);
+
+        // For failure test scenarios, guarantee at least one FAILED settlement
+        if (scenarioId.contains("failure")) {
+            boolean hasFailed = settlements.stream()
+                    .anyMatch(s -> s.getStatus() == com.enterprise.testing.shared.model.trade.SettlementStatus.FAILED);
+            if (!hasFailed && settlements.size() > 1) {
+                var last = settlements.get(settlements.size() - 1);
+                last.setStatus(com.enterprise.testing.shared.model.trade.SettlementStatus.FAILED);
+                last.setFailReason("COUNTERPARTY_DEFAULT");
+                log.info("Forced FAILED settlement for failure test scenario: {}", last.getSettlementId());
+            }
+        }
+
         List<KafkaEvent> expectedEvents = TradeKafkaEventGenerator.fromTrades(trades, settlements);
 
         SyntheticDataSet dataSet = new SyntheticDataSet();

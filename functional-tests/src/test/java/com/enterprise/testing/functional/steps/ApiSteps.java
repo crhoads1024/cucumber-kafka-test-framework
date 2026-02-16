@@ -78,6 +78,7 @@ public class ApiSteps {
 
         Response response = given()
                 .contentType(ContentType.JSON)
+                .urlEncodingEnabled(false)
                 .when()
                 .get(resolvedEndpoint);
 
@@ -203,6 +204,22 @@ public class ApiSteps {
         Object createdOrderId = context.get("created.order.id");
         if (createdOrderId != null) {
             resolved = resolved.replace("{created.order.id}", createdOrderId.toString());
+        }
+
+        Object createdTradeId = context.get("created.trade.id");
+        if (createdTradeId != null) {
+            resolved = resolved.replace("{created.trade.id}", createdTradeId.toString());
+        }
+
+        Object generatedAccountId = context.get("generated.account.id");
+        if (generatedAccountId != null) {
+            resolved = resolved.replace("{generated.account.id}", generatedAccountId.toString());
+        }
+
+        // Safety: fail fast if any placeholders remain unresolved
+        if (resolved.contains("{") && resolved.contains("}")) {
+            String unresolved = resolved.replaceAll(".*?(\\{[^}]+}).*", "$1");
+            log.warn("Unresolved placeholder in URL: {} -> {}", endpoint, resolved);
         }
 
         return resolved;

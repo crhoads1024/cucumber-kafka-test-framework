@@ -47,8 +47,16 @@ public class KafkaSteps {
 
         Map<String, String> expectedFields = dataTable.asMap(String.class, String.class);
 
+        // Determine the current scenario's correlation ID for scoping
+        String scenarioCorrelationId = resolveCurrentCorrelationId();
+
         KafkaEvent event = consumer.awaitEvent(e -> {
             if (!topic.equals(e.getTopic())) return false;
+
+            // Scope to current scenario's correlation ID if available
+            if (scenarioCorrelationId != null && e.getCorrelationId() != null) {
+                if (!scenarioCorrelationId.equals(e.getCorrelationId())) return false;
+            }
 
             for (Map.Entry<String, String> entry : expectedFields.entrySet()) {
                 String field = entry.getKey();
@@ -62,7 +70,8 @@ public class KafkaSteps {
 
         // Store the matched event for subsequent payload assertions
         context.put("lastKafkaEvent", event);
-        log.info("Matched Kafka event: {} on {}", event.getEventType(), topic);
+        log.info("Matched Kafka event: {} on {} (correlationId={})",
+                event.getEventType(), topic, event.getCorrelationId());
     }
 
     @Then("the event payload should contain field {string}")
@@ -90,32 +99,68 @@ public class KafkaSteps {
     @Then("the Kafka events on {string} should appear in order:")
     public void eventsInOrder(String topic, List<String> expectedOrder) {
         KafkaTestConsumer consumer = context.getKafkaConsumer();
+        String scenarioCorrelationId = resolveCurrentCorrelationId();
 
         // Wait a bit for all events to arrive
         try { Thread.sleep(3000); } catch (InterruptedException ignored) {}
 
         List<KafkaEvent> topicEvents = consumer.getEventsByTopic(topic);
+
+        // Scope to current scenario's correlation ID
+        if (scenarioCorrelationId != null) {
+            topicEvents = topicEvents.stream()
+                    .filter(e -> scenarioCorrelationId.equals(e.getCorrelationId()))
+                    .toList();
+        }
+
         List<String> actualOrder = topicEvents.stream()
                 .map(KafkaEvent::getEventType)
                 .toList();
 
         assertThat(actualOrder)
-                .as("Events on '%s' should appear in order %s", topic, expectedOrder)
+                .as("Events on '%s' should appear in order %s (correlationId=%s)", topic, expectedOrder, scenarioCorrelationId)
                 .containsSubsequence(expectedOrder.toArray(new String[0]));
     }
 
     @Then("no Kafka event should appear on {string} within {int} seconds")
     public void noEventOnTopic(String topic, int timeoutSeconds) {
         KafkaTestConsumer consumer = context.getKafkaConsumer();
+        String scenarioCorrelationId = resolveCurrentCorrelationId();
 
         try {
             Thread.sleep(timeoutSeconds * 1000L);
         } catch (InterruptedException ignored) {}
 
         List<KafkaEvent> events = consumer.getEventsByTopic(topic);
+
+        // Scope to current scenario's correlation ID
+        if (scenarioCorrelationId != null) {
+            events = events.stream()
+                    .filter(e -> scenarioCorrelationId.equals(e.getCorrelationId()))
+                    .toList();
+        }
+
         assertThat(events)
-                .as("Expected no events on topic '%s' but found %d", topic, events.size())
+                .as("Expected no events on topic '%s' for correlationId '%s' but found %d",
+                        topic, scenarioCorrelationId, events.size())
                 .isEmpty();
+    }
+
+    // ===== HELPERS =====
+
+    /**
+     * Resolve the current scenario's correlation ID for scoping Kafka matches.
+     * This prevents matching stale events from previous test runs.
+     * Order scenarios use created.order.id, trade scenarios use created.trade.id.
+     */
+    private String resolveCurrentCorrelationId() {
+        Object orderId = context.get("created.order.id");
+        if (orderId != null) return orderId.toString();
+
+        Object tradeId = context.get("created.trade.id");
+        if (tradeId != null) return tradeId.toString();
+
+        return null;
     }
 
     /**

@@ -125,12 +125,43 @@ public class KafkaTestConsumer implements AutoCloseable {
     }
 
     /**
-     * Clear all captured events. Call between scenarios.
+     * Clear all captured events and seek to end of all partitions.
+     * This ensures the next scenario only sees NEW events.
+     * 
+     * IMPORTANT: KafkaConsumer is NOT thread-safe. We must stop the
+     * poll thread before touching the consumer, then restart it.
      */
     public void reset() {
+        // 1. Stop the poll thread
+        boolean wasPolling = polling;
+        polling = false;
+        if (pollThread != null) {
+            try { pollThread.join(2000); } catch (InterruptedException ignored) {}
+        }
+
+        // 2. Clear captured events
         rawRecords.clear();
         capturedEvents.clear();
-        log.debug("Kafka consumer reset");
+
+        // 3. Seek to end (now safe - no other thread using consumer)
+        try {
+            consumer.poll(java.time.Duration.ofMillis(100)); // force assignment
+            var assignment = consumer.assignment();
+            if (!assignment.isEmpty()) {
+                consumer.seekToEnd(assignment);
+                consumer.poll(java.time.Duration.ofMillis(200)); // drain buffer
+                rawRecords.clear();
+                capturedEvents.clear();
+            }
+        } catch (Exception e) {
+            log.debug("Seek to end during reset (non-fatal): {}", e.getMessage());
+        }
+
+        // 4. Restart polling if it was running before
+        if (wasPolling) {
+            startPolling();
+        }
+        log.debug("Kafka consumer reset - cleared events and seeked to end");
     }
 
     private void startPolling() {

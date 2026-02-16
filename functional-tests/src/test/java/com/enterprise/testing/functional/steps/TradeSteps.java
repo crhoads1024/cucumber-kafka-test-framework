@@ -50,9 +50,20 @@ public class TradeSteps {
 
         if (!registry.hasScenario(scenarioId)) {
             log.info("Generating trade data for scenario: {}", scenarioId);
-            // Default: generate with the crypto watchlist symbols
-            registry.generateTradeScenario(scenarioId,
-                    List.of("AAPL", "BTC-USD", "XRP-USD"), 3);
+
+            if (scenarioId.contains("round-trip")) {
+                // Round-trip scenarios: exactly 1 BUY + 1 SELL for a single symbol
+                String symbol = scenarioId.contains("crypto") ? "BTC-USD" : "AAPL";
+                registry.generateRoundTripScenario(scenarioId, symbol);
+            } else if (scenarioId.contains("settlement-failures")) {
+                // Failure scenarios: need enough trades to guarantee some FAILED settlements
+                registry.generateTradeScenario(scenarioId,
+                        List.of("TSLA", "JPM"), 10);
+            } else {
+                // Default: generate with common symbols
+                registry.generateTradeScenario(scenarioId,
+                        List.of("AAPL", "BTC-USD", "XRP-USD"), 3);
+            }
         }
 
         SyntheticDataSet dataSet = registry.getScenario(scenarioId);

@@ -29,6 +29,7 @@ Feature: Order API Functional Tests
     And the response body should contain field "id"
     And the response body should contain field "status" with value "PENDING"
 
+  @integration
   Scenario: Retrieve an existing order by ID
     Given an order has been created for the generated user
     When I send a GET request to "/api/orders/{created.order.id}"
