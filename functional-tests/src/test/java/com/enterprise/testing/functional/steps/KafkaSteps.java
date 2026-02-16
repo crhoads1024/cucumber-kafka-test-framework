@@ -45,7 +45,13 @@ public class KafkaSteps {
         KafkaTestConsumer consumer = context.getKafkaConsumer();
         assertThat(consumer).as("Kafka consumer not initialized. Add Background step.").isNotNull();
 
-        Map<String, String> expectedFields = dataTable.asMaps(String.class, String.class).get(0);
+        // DataTable has headers: | field | expected |
+        // asMaps() uses first row as headers, returns list of data rows
+        List<Map<String, String>> rows = dataTable.asMaps(String.class, String.class);
+        Map<String, String> expectedFields = new java.util.HashMap<>();
+        for (Map<String, String> row : rows) {
+            expectedFields.put(row.get("field"), row.get("expected"));
+        }
 
         // Determine the current scenario's correlation ID for scoping
         String scenarioCorrelationId = resolveCurrentCorrelationId();
