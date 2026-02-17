@@ -73,13 +73,13 @@ public class OrderApiContractTest {
                         .stringValue("status", "PENDING")          // Exact value
                         .stringType("customerId")                  // Any string
                         .decimalType("totalAmount")                // Any decimal
+                        .stringMatcher("createdAt",                // ISO datetime pattern
+                                "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}.*",
+                                "2026-01-15T10:30:00Z")
                         .minArrayLike("items", 1)                  // At least 1 item
                             .stringType("productId")
                             .closeObject()
                         .closeArray()
-                        .stringMatcher("createdAt",                // ISO datetime pattern
-                                "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}.*",
-                                "2026-01-15T10:30:00Z")
                 )
                 .toPact(V4Pact.class);
     }
