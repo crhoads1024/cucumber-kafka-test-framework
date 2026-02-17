@@ -78,7 +78,8 @@ public class OrderApiContractTest {
                             .closeObject()
                         .closeArray()
                         .stringMatcher("createdAt",                // ISO datetime pattern
-                                "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}.*")
+                                "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}.*",
+                                "2026-01-15T10:30:00Z")
                 )
                 .toPact(V4Pact.class);
     }
