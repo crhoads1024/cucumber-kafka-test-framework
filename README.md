@@ -2,6 +2,17 @@
 
 A multi-layered, BDD-driven test framework with Cucumber, Kafka, synthetic data generation, contract testing, database testing, and JMeter performance testing — orchestrated via CI/CD containers.
 
+## Prerequisites
+
+| Tool | Version | Required For |
+|------|---------|-------------|
+| Java (JDK) | 17+ | All modules |
+| Maven | 3.9+ | Build and test execution |
+| Docker Desktop | Latest | Local infrastructure (WireMock, Kafka, PostgreSQL) |
+| Git | 2.x+ | Source control |
+| JMeter | 5.x | Performance tests (Phase 3+) — optional |
+| Python 3 | 3.10+ | Performance threshold validation, JSON pretty-printing — optional |
+
 ## Architecture
 
 ```
@@ -24,22 +35,48 @@ A multi-layered, BDD-driven test framework with Cucumber, Kafka, synthetic data 
 ## Quick Start
 
 ```bash
-# 1. Start local infrastructure
-docker-compose up -d
+# 1. Install shared modules to local Maven repository
+mvn install -pl shared,data-generator -am -DskipTests
 
-# 2. Generate test data
-mvn exec:java -pl data-generator \
-  -Dexec.mainClass="com.enterprise.testing.datagen.DataGeneratorMain"
+# 2. Generate synthetic test data
+mvn exec:java -pl data-generator
 
-# 3. Run functional tests
+# 3. Start local infrastructure (WireMock only for smoke/functional tests)
+docker compose up -d wiremock
+sleep 5
+
+# 4. Run smoke tests (fastest verification)
 mvn test -pl functional-tests -Dcucumber.filter.tags="@smoke"
 
-# 4. Run contract tests
+# 5. Run contract tests (no infrastructure needed)
 mvn test -pl contract-tests
 
-# 5. Run all tests
-mvn test
+# 6. Start full stack for integration tests
+docker compose up -d
+sleep 20
+
+# 7. Run all functional tests
+mvn test -pl functional-tests
+
+# 8. Run performance tests (requires WireMock running)
+jmeter -n -t perf-tests/test-plans/order-load-test.jmx -l results.jtl -e -o report/ \
+&& python3 perf-tests/scripts/check-perf-thresholds.py results.jtl
+
+# 9. Cleanup
+docker compose down -v
 ```
+
+## Infrastructure by Test Layer
+
+| Test Layer | Tags | Infrastructure Required | Start Command |
+|-----------|------|------------------------|---------------|
+| Smoke | `@smoke` | WireMock | `docker compose up -d wiremock` |
+| Functional | `@functional` | WireMock | `docker compose up -d wiremock` |
+| Kafka | `@kafka` | WireMock + Kafka + Zookeeper | `docker compose up -d wiremock kafka zookeeper` |
+| Database | `@database` | WireMock + PostgreSQL | `docker compose up -d wiremock postgres` |
+| Contract | `@contract` | None | N/A |
+| E2E | `@e2e` | Full stack | `docker compose up -d` |
+| Performance | `@performance` | WireMock | `docker compose up -d wiremock` |
 
 ## Project Structure
 
@@ -71,6 +108,24 @@ test-framework/
 ├── docker/                  # Dockerfiles, init scripts
 ├── docker-compose.yml       # Local dev infrastructure
 └── .github/workflows/       # CI/CD pipeline
+```
+
+## Test Reports
+
+| Layer | Report Path | Format |
+|-------|------------|--------|
+| Functional (Cucumber) | `functional-tests/target/cucumber-reports/cucumber.html` | HTML — open in browser |
+| Functional (JSON) | `functional-tests/target/cucumber-reports/cucumber.json` | JSON — for CI plugins |
+| Functional (Surefire) | `functional-tests/target/surefire-reports/` | JUnit XML |
+| Contract (Pact) | `contract-tests/target/pacts/` | Pact JSON contracts |
+| Contract (Surefire) | `contract-tests/target/surefire-reports/` | JUnit XML |
+| Performance (Dashboard) | `report/index.html` | HTML — JMeter dashboard |
+| Performance (Raw) | `results.jtl` | CSV — parsed by threshold script |
+
+Quick open (macOS):
+```bash
+open functional-tests/target/cucumber-reports/cucumber.html
+open report/index.html
 ```
 
 ---
@@ -374,11 +429,14 @@ void yourEventConformsToSchema() {
 ### Running Performance Tests
 
 ```bash
-# Local run
+# Prerequisite: WireMock must be running
+docker compose up -d wiremock
+sleep 5
+
+# Run load test from the project root
 jmeter -n -t perf-tests/test-plans/order-load-test.jmx \
   -Jhost=localhost -Jport=8080 \
   -Jthreads=10 -Jrampup=5 -Jduration=60 \
-  -Jdata.file=./generated-data/jmeter-users.csv \
   -l results.jtl -e -o report/
 
 # Validate thresholds
@@ -415,16 +473,37 @@ All configuration is environment-variable driven. Set any property via env var:
 | `db.url` | `DB_URL` | `jdbc:postgresql://localhost:5432/testdb` |
 | `use.testcontainers` | `USE_TESTCONTAINERS` | `true` |
 
-## Running in CI/CD
+## Running in CI/CD (GitHub Actions)
 
-The GitHub Actions pipeline runs automatically on push to `main`/`develop`:
+The pipeline is defined in `.github/workflows/test-pipeline.yml`.
 
-```
-generate-data ──→ functional-tests ──→ performance-tests
-               ──→ contract-tests ──↗
-```
+### Automatic Triggers
+- **Push to main or develop** — runs data generation, functional tests, and contract tests. Performance tests only run on main.
+- **Pull request to main** — runs data generation, functional tests, and contract tests.
 
-Trigger a manual run with custom perf parameters:
+### Manual Trigger (workflow_dispatch)
+Trigger a full pipeline run (including performance tests) from the GitHub UI:
+1. Go to your repository on GitHub
+2. Click the **Actions** tab
+3. Select **"Test Pipeline"** from the left sidebar
+4. Click **"Run workflow"** dropdown (top right)
+5. Select the branch, optionally set JMeter threads and duration
+6. Click the green **"Run workflow"** button
+
+Or via the GitHub CLI:
 ```bash
 gh workflow run test-pipeline.yml -f perf_threads=100 -f perf_duration=600
 ```
+
+### Pipeline Flow
+```
+Stage 1: Generate Data ──→ Stage 2a: Functional + Database Tests ──→ Stage 3: Performance
+                       ──→ Stage 2b: Contract Tests (parallel)   ──↗
+```
+
+### CI vs Local Differences
+- **Locally**: `docker compose` starts WireMock, Kafka, and PostgreSQL. You run JMeter from the CLI.
+- **In CI**: GitHub Actions service containers provide Kafka and PostgreSQL. A JMeter GitHub Action runs the load test. Test data is shared across jobs via artifacts.
+
+### Viewing CI Results
+After a run completes, click on it in the Actions tab. Each job shows logs inline. Scroll to the bottom of the run page to download artifacts: **functional-test-reports**, **pact-contracts**, and **perf-reports**.

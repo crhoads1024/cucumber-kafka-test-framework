@@ -44,11 +44,12 @@
 
       <!-- CSV Data Set - reads synthetic test data -->
       <CSVDataSet guiclass="TestBeanGUI" testclass="CSVDataSet" testname="Synthetic Test Data">
-        <stringProp name="filename">${__P(data.file,../generated-data/jmeter-users.csv)}</stringProp>
+        <stringProp name="filename">${__P(data.file,generated-data/jmeter-users.csv)}</stringProp>
         <stringProp name="variableNames">userId,email,firstName,lastName,orderId,orderTotal</stringProp>
         <stringProp name="delimiter">,</stringProp>
         <boolProp name="ignoreFirstLine">true</boolProp>
         <stringProp name="recycle">true</stringProp>
+        <boolProp name="stopThread">false</boolProp>
         <stringProp name="shareMode">shareMode.all</stringProp>
       </CSVDataSet>
       <hashTree/>
